@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"os"
 	"runtime"
 	"slices"
 	"sort"
@@ -699,10 +700,27 @@ func netInterfaces() ([]Interface, error) {
 		return nil, err
 	}
 	ret := make([]Interface, len(ifs))
-	for i := range ifs {
-		ret[i].Interface = &ifs[i]
+
+	excluded := strings.Fields(os.Getenv("TS_EXCLUDED_INTERFACES"))
+	allowed := strings.Fields(os.Getenv("TS_ALLOWED_INTERFACES"))
+
+	i := 0
+	for n := range ifs {
+		if slices.Contains(excluded, ifs[n].Name) {
+			continue
+		}
+		if len(allowed) > 0 {
+			if slices.Contains(allowed, ifs[n].Name) {
+				ret[i].Interface = &ifs[n]
+				i += 1
+			}
+		} else {
+			ret[i].Interface = &ifs[n]
+			i += 1
+		}
 	}
-	return ret, nil
+
+	return ret[:i], nil
 }
 
 // DefaultRouteDetails are the details about a default route returned
